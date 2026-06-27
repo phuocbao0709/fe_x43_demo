@@ -1,31 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Eye, Heart, RefreshCcw, ShieldCheck, ShoppingCart, Headphones, Truck, User, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Heart, RefreshCcw, ShieldCheck, ShoppingCart, Headphones, Truck, User, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { homeApi } from "@/modules/home/api/home.api";
 import { tokenStore } from "@/modules/auth/store/token.store";
 import { cn } from "@/shared/lib/utils";
+
+type ProductCard = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  price: number;
+  compareAtPrice?: number;
+  discountPercent?: number;
+  image: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  isNew: boolean;
+  tags: string[];
+};
 
 type HomePageResponse = {
   hero: { title: string; description: string; ctaPrimary: string; ctaSecondary: string; image: string };
   banners: { id: string; imageUrl: string; order: number }[];
   navigation: { label: string; href: string }[];
-  categories: { name: string; description: string; href: string; image: string }[];
-  featuredProducts: {
-    id: string;
-    name: string;
-    slug: string;
-    description?: string;
-    price: number;
-    compareAtPrice?: number;
-    discountPercent?: number;
-    image: string;
-    category: string;
-    rating: number;
-    reviewCount: number;
-    isNew: boolean;
-    tags: string[];
-  }[];
+  featuredProducts: ProductCard[];
   benefits: { title: string; description: string }[];
+};
+
+const emptyHomeData: HomePageResponse = {
+  hero: { title: "", description: "", ctaPrimary: "", ctaSecondary: "", image: "" },
+  banners: [],
+  navigation: [],
+  featuredProducts: [],
+  benefits: []
 };
 
 const formatPrice = (value: number) => new Intl.NumberFormat("vi-VN").format(value) + "đ";
@@ -48,7 +57,14 @@ export const HomePage = () => {
     const run = async () => {
       try {
         const response = await homeApi.getHome();
-        setData(response.data as HomePageResponse);
+        setData({
+          ...emptyHomeData,
+          ...(response.data as Partial<HomePageResponse>),
+          banners: (response.data?.banners ?? []) as HomePageResponse["banners"],
+          navigation: (response.data?.navigation ?? []) as HomePageResponse["navigation"],
+          featuredProducts: (response.data?.featuredProducts ?? []) as HomePageResponse["featuredProducts"],
+          benefits: (response.data?.benefits ?? []) as HomePageResponse["benefits"]
+        });
       } finally {
         setLoading(false);
       }
@@ -79,7 +95,7 @@ export const HomePage = () => {
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-4 md:px-16">
           <div className="text-3xl font-bold tracking-tighter text-primary">LUXE</div>
           <nav className="hidden items-center gap-6 md:flex">
-            {data.navigation.map((item, index) => (
+            {data.navigation?.map((item, index) => (
               <a key={item.label} href={item.href} className={cn("pb-1 text-base font-semibold transition-colors duration-200", index === 0 ? "border-b-2 border-secondary text-secondary" : "text-slate-500 hover:text-primary")}>
                 {item.label}
               </a>
@@ -98,7 +114,7 @@ export const HomePage = () => {
           <div className="absolute inset-0 z-10 bg-gradient-to-r from-primary/55 via-primary/20 to-transparent" />
           <img
             className="h-full w-full object-cover transition-all duration-1000 ease-out"
-            style={{ transform: 'scale(1.02)' }}
+            style={{ transform: "scale(1.02)" }}
             alt="Luxury banner"
             src={currentBanner?.imageUrl || data.hero.image}
           />
@@ -117,47 +133,14 @@ export const HomePage = () => {
 
       <section className="mx-auto max-w-[1440px] px-4 py-5 md:px-16">
         <div className="flex justify-center gap-2">
-          {data.banners.map((banner, index) => (
+          {data.banners?.map((banner, index) => (
             <button
               key={banner.id}
               onClick={() => setActiveBanner(index)}
-              className={cn(
-                "h-2 rounded-full transition-all duration-300 ease-out",
-                index === activeBanner ? "w-10 bg-secondary" : "w-2 bg-slate-300 hover:bg-slate-400"
-              )}
+              className={cn("h-2 rounded-full transition-all duration-300 ease-out", index === activeBanner ? "w-10 bg-secondary" : "w-2 bg-slate-300 hover:bg-slate-400")}
               aria-label={`Go to banner ${index + 1}`}
             />
           ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-[1440px] px-4 py-20 md:px-16">
-        <div className="mb-16 text-center">
-          <h2 className="mb-3 text-3xl font-semibold tracking-tight text-primary md:text-4xl">Danh Mục Đẳng Cấp</h2>
-          <p className="text-base text-slate-500">Lựa chọn phong cách phù hợp với cá tính của bạn</p>
-        </div>
-
-        <div className="grid h-auto gap-6 lg:h-[600px] lg:grid-cols-12">
-          <Link to={data.categories[0]?.href ?? "#"} className="group relative overflow-hidden rounded-xl bg-surface-container shadow-sm lg:col-span-8">
-            <img className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" alt={data.categories[0]?.name} src={data.categories[0]?.image} />
-            <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-primary/80 via-transparent to-transparent p-6 md:p-8">
-              <h3 className="text-2xl font-semibold text-white md:text-3xl">{data.categories[0]?.name}</h3>
-              <p className="mt-2 text-white/80">{data.categories[0]?.description}</p>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#ffdbc8]">Khám phá ngay <ArrowRight className="size-4" /></span>
-            </div>
-          </Link>
-
-          <div className="grid gap-6 lg:col-span-4 lg:grid-rows-2">
-            {data.categories.slice(1, 3).map((category) => (
-              <Link key={category.name} to={category.href} className="group relative overflow-hidden rounded-xl bg-surface-container shadow-sm">
-                <img className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" alt={category.name} src={category.image} />
-                <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-primary/80 via-transparent to-transparent p-6">
-                  <h3 className="text-xl font-semibold text-white">{category.name}</h3>
-                  <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#ffdbc8]">Xem tất cả <ArrowRight className="size-4" /></span>
-                </div>
-              </Link>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -165,13 +148,13 @@ export const HomePage = () => {
         <div className="mx-auto max-w-[1440px] px-4 md:px-16">
           <div className="mb-16 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="mb-3 text-3xl font-semibold tracking-tight text-primary md:text-4xl">Sản Phẩm Nổi Bật</h2>
-              <p className="text-base text-slate-500">Những thiết kế được yêu thích nhất trong tuần này</p>
+              <h2 className="mb-3 text-3xl font-semibold tracking-tight text-primary md:text-4xl">Featured Products</h2>
+              <p className="text-base text-slate-500">Những sản phẩm nổi bật trong tuần này</p>
             </div>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-4">
-            {data.featuredProducts.map((product) => (
+            {data.featuredProducts?.map((product) => (
               <Link key={product.id} to={`/products/${product.slug}`} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
                 <div className="relative aspect-[4/4.2] overflow-hidden bg-slate-50">
                   <img className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" src={product.image} alt={product.name} />
@@ -206,7 +189,7 @@ export const HomePage = () => {
       </section>
 
       <section className="mx-auto grid max-w-[1440px] gap-0 border-y border-outline-variant px-4 py-20 md:grid-cols-4 md:px-16">
-        {data.benefits.map((benefit, index) => {
+        {data.benefits?.map((benefit, index) => {
           const Icon = [ShieldCheck, Truck, RefreshCcw, Headphones][index] ?? ShieldCheck;
           return (
             <div key={benefit.title} className={cn("flex flex-col items-center p-6 text-center", index > 0 && "md:border-l md:border-outline-variant")}>
